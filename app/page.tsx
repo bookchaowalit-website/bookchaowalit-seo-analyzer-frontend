@@ -1,146 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 
-function Shell({
-  title,
-  subtitle,
-  badge = "Portfolio demo · local-only",
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  badge?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 dark:bg-black dark:text-zinc-100">
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <header className="mb-8">
-          <p className="text-xs font-medium uppercase tracking-wider text-zinc-500">{badge}</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight">{title}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">{subtitle}</p>
-        </header>
-        {children}
-        <footer className="mt-10 border-t border-zinc-200 pt-4 text-xs text-zinc-500 dark:border-zinc-800">
-          Honest demo: no multi-tenant backend. State (if any) stays in this browser.
-        </footer>
-      </div>
-    </div>
-  );
-}
-
-function Button({
-  children,
-  onClick,
-  variant = "primary",
-  disabled,
-  type = "button",
-  className = "",
-}: {
-  children: ReactNode;
-  onClick?: () => void;
-  variant?: "primary" | "secondary" | "ghost" | "danger";
-  disabled?: boolean;
-  type?: "button" | "submit";
-  className?: string;
-}) {
-  const base =
-    "inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium transition disabled:opacity-50 " +
-    className;
-  const styles =
-    variant === "primary"
-      ? "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900"
-      : variant === "secondary"
-        ? "bg-white text-zinc-900 ring-1 ring-zinc-200 hover:bg-zinc-100 dark:bg-zinc-900 dark:text-zinc-100 dark:ring-zinc-700"
-        : variant === "danger"
-          ? "bg-red-600 text-white hover:bg-red-500"
-          : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-900";
-  return (
-    <button type={type} disabled={disabled} onClick={onClick} className={`${base} ${styles}`}>
-      {children}
-    </button>
-  );
-}
-
-const inputClass =
-  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-zinc-400 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950";
-
-function useLocalStorage<T>(key: string, initial: T) {
-  const [value, setValue] = useState<T>(initial);
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw != null) setValue(JSON.parse(raw) as T);
-    } catch {
-      /* ignore */
-    }
-    setReady(true);
-  }, [key]);
-  useEffect(() => {
-    if (!ready) return;
-    localStorage.setItem(key, JSON.stringify(value));
-  }, [key, value, ready]);
-  return [value, setValue] as const;
-}
-
-function uid() {
-  return crypto.randomUUID();
-}
-
-async function copyText(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
+type Check = { name: string; ok: boolean; detail: string };
+function inspect(html: string) { const title = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || ""; const description = (html.match(/name=["']description["'][^>]*content=["']([^"']*)["']/i) || html.match(/content=["']([^"']*)["'][^>]*name=["']description["']/i) || [])[1] || ""; const h1 = (html.match(/<h1[^>]*>([^<]*)<\/h1>/i) || [])[1] || ""; const images = (html.match(/<img\b/gi) || []).length; const imagesWithAlt = (html.match(/<img[^>]*alt=/gi) || []).length; const links = (html.match(/<a\b/gi) || []).length; const checks: Check[] = [{ name: "Title present", ok: title.length > 0, detail: title || "missing" }, { name: "Title length 30–60", ok: title.length >= 30 && title.length <= 60, detail: `${title.length} chars` }, { name: "Meta description", ok: description.length >= 50, detail: `${description.length} chars` }, { name: "H1 present", ok: Boolean(h1), detail: h1 || "missing" }, { name: "Images have alt", ok: images === 0 || imagesWithAlt === images, detail: `${imagesWithAlt}/${images}` }, { name: "Has links", ok: links > 0, detail: String(links) }]; return { checks, score: Math.round((checks.filter((check) => check.ok).length / checks.length) * 100) }; }
+const SAMPLE = '<title>Demo Page Title That Is Long Enough</title>\n<meta name="description" content="A demo description that is long enough for SEO checks.">\n<h1>Hello</h1>\n<img src="/x.png" alt="x">\n<a href="/a">A</a>';
 
 export default function Home() {
   const [url, setUrl] = useState("https://bookchaowalit.com");
-  const [html, setHtml] = useState('<title>Demo Page Title That Is Long Enough</title>\n<meta name="description" content="A demo description that is long enough for SEO checks.">\n<h1>Hello</h1>\n<img src="/x.png" alt="x">\n<a href="/a">A</a>');
-  const report = useMemo(() => {
-    const title = (html.match(/<title>([^<]*)<\/title>/i) || [])[1] || "";
-    const desc =
-      (html.match(/name=["']description["'][^>]*content=["']([^"']*)["']/i) ||
-        html.match(/content=["']([^"']*)["'][^>]*name=["']description["']/i) ||
-        [])[1] || "";
-    const h1 = (html.match(/<h1[^>]*>([^<]*)<\/h1>/i) || [])[1] || "";
-    const imgs = (html.match(/<img\b/gi) || []).length;
-    const imgsAlt = (html.match(/<img[^>]*alt=/gi) || []).length;
-    const links = (html.match(/<a\b/gi) || []).length;
-    const checks = [
-      { name: "Title present", ok: title.length > 0, detail: title || "missing" },
-      { name: "Title length 30–60", ok: title.length >= 30 && title.length <= 60, detail: title.length + " chars" },
-      { name: "Meta description", ok: desc.length >= 50, detail: desc.length + " chars" },
-      { name: "H1 present", ok: !!h1, detail: h1 || "missing" },
-      { name: "Images have alt", ok: imgs === 0 || imgsAlt > 0, detail: imgsAlt + "/" + imgs },
-      { name: "Has links", ok: links > 0, detail: String(links) },
-    ];
-    return { checks, score: Math.round((checks.filter((c) => c.ok).length / checks.length) * 100) };
-  }, [html]);
-  return (
-    <Shell title="SEO Analyzer" subtitle="Score an HTML snapshot for basic on-page SEO checks. No live crawl.">
-      <div className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2">
-          <input className={inputClass} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="URL (label only)" />
-          <textarea className={`${inputClass} min-h-[240px] font-mono`} value={html} onChange={(e) => setHtml(e.target.value)} />
-        </div>
-        <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <div className="text-3xl font-semibold">{report.score}<span className="text-base font-normal text-zinc-500">/100</span></div>
-          <ul className="mt-4 space-y-2 text-sm">
-            {report.checks.map((c) => (
-              <li key={c.name} className="flex justify-between gap-2">
-                <span>{c.ok ? "✓" : "✗"} {c.name}</span>
-                <span className="max-w-[50%] truncate text-zinc-500">{c.detail}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </Shell>
-  );
+  const [html, setHtml] = useState(SAMPLE);
+  const [copied, setCopied] = useState(false);
+  const report = useMemo(() => inspect(html), [html]);
+  const copyReport = async () => { try { await navigator.clipboard.writeText(`${url}\nSEO snapshot score: ${report.score}/100\n${report.checks.map((check) => `${check.ok ? "PASS" : "FAIL"} ${check.name} — ${check.detail}`).join("\n")}`); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { setCopied(false); } };
+  return <div className="inspector"><main className="inspector-shell"><nav className="inspector-nav"><span><strong>SEO</strong> / INSPECTION BENCH</span><span>LOCAL SNAPSHOT / NO CRAWL</span></nav><header className="inspector-hero"><div><div className="snapshot-note">HTML specimen / live local analysis</div><h1>Find the signal in the markup.</h1></div><p>Paste a page snapshot and read the checks that can be verified here. This tool does not fetch or crawl the URL.</p></header><section className="bench" aria-label="SEO inspection bench"><div className="source-panel"><label className="field-label" htmlFor="source-url">Source label</label><input id="source-url" className="url-field" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="URL (label only)" /><label className="field-label" htmlFor="source-html" style={{ marginTop: 20 }}>HTML snapshot</label><textarea id="source-html" className="html-field" value={html} onChange={(event) => setHtml(event.target.value)} spellCheck={false} /><div className="source-footer"><span>Analysis updates as you type.</span><span className="source-counter">{html.length} chars</span></div></div><div className="report-panel"><div className="report-top"><div><span className="report-label">Lint ledger / result</span><h2>{report.score >= 80 ? "Healthy signal" : report.score >= 50 ? "Needs attention" : "Incomplete signal"}</h2></div><div className="report-score"><strong>{report.score}</strong><span>/100</span><div className="score-bar" role="img" aria-label={`${report.score} out of 100`}><span style={{ width: `${report.score}%` }} /></div></div></div><ul className="check-list">{report.checks.map((check) => <li className="check-row" key={check.name}><span className={`status-mark ${check.ok ? "" : "is-fail"}`} role="img" aria-label={check.ok ? "Pass" : "Fail"} /><span className="check-name">{check.name}</span><span className="check-detail">{check.detail}</span></li>)}</ul><div className="report-actions"><button className="action primary" type="button" onClick={copyReport}>{copied ? "Copied report" : "Copy report"}</button><button className="action" type="button" onClick={() => { setUrl("https://bookchaowalit.com"); setHtml(SAMPLE); }}>Reset sample</button></div><p className="report-foot">Checks are intentionally basic: title, description, heading, image alt text, and links. Treat this as a local inspection aid, not a ranking prediction.</p></div></section><footer className="inspector-footer">The score is derived only from the HTML currently in the editor. No request is sent to the source URL.</footer></main></div>;
 }
